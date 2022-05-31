@@ -31,9 +31,9 @@ class ApiService
         $contentType = $response->getHeaders()['content-type'][0];
         $content = $response->getContent();
         $content = $response->toArray();
-        $result = ['lat' => $content[0]['lat'], 'lon' => $content[0]['lon'], 'state' => $content[0]['state']];
+
         //return $content;
-        return $result;
+        return ['code' => $statusCode, 'content-type' => $contentType, 'data' => $content];
     }
 
     public function fetchFccWeatherInfo(array $data)
@@ -43,25 +43,39 @@ class ApiService
             'https://weather-proxy.freecodecamp.rocks/api/current',
             [
                 'query' => [
-                    'lat' => $data['lat'],
-                    'lon' => $data['lon']
+                    'lat' => $data['data'][0]['lat'],
+                    'lon' => $data['data'][0]['lon']
                 ]
             ]
         );
 
         $statusCode = $response->getStatusCode();
         $contentType = $response->getHeaders()['content-type'][0];
-        $content = $response->getContent();
+
         $content = $response->toArray();
-        $result = ['state' => $data['state'], 'message' => $content];
-        return $result;
+        if ($content !== [])
+        {
+            $result = ['weather' => $content['weather'][0], 'main' => $content['main'], 'sys' => $content['sys']['country'], 'name' => $content['name']];
+        }
+        else
+        {
+            $result = $content;
+        }
+        //$result = $content;
+        return ['code' => $statusCode, 'data' => $result];
     }
 
     public function WeatherTownService(string $city, string $apiKey)
     {
         $geocodeInfo = $this->fetchGeocodeInfo($city, $apiKey);
-        $weatherInfo = $this->fetchFccWeatherInfo($geocodeInfo);
-        $result = ['message' => $weatherInfo];
-        return $result;
+        if ($geocodeInfo['data'] !== [])
+        {
+            $weatherInfo = $this->fetchFccWeatherInfo($geocodeInfo);
+            return $weatherInfo;
+        }
+        else
+        {
+            return $geocodeInfo;
+        }
     }
 }
